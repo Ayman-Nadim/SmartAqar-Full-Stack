@@ -1,8 +1,8 @@
-# Node modules
+# Root
 node_modules/
-server/node_modules/
-client/node_modules/
 
-# Optional: package-lock
-server/package-lock.json
-client/package-lock.json
+# Server
+server/node_modules/
+
+# Client
+client/node_modules/
