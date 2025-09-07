@@ -8,7 +8,7 @@ import LoginPage from './components/LoginPage';
 import PropertyCatalog from './components/PropertiesDatabase/PropertyCatalog';
 import UserProfile from './components/UserProfile';
 import ProspectsDatabase from './components/ProspectsDatabase/ProspectsDatabase';
-import WhatsAppCampaigns from './components/WhatsAppCampaigns';
+import WhatsAppCampaigns from './components/WhatsAppCampaigns/WhatsAppCampaigns';
 import NavigationMenu from './components/NavigationMenu';
 import ProtectedRoute from './components/ProtectedRoute';
 

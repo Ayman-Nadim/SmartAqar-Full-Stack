@@ -8,9 +8,6 @@ import {
   Users, 
   MessageCircle, 
   LogOut,
-  Menu,
-  X,
-  ChevronDown,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
@@ -24,14 +21,14 @@ const NavigationMenu = ({ currentPage, onLogout, children }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Pages où la sidebar ne doit pas apparaître
+  // Public pages where the sidebar should NOT appear
   const publicPages = ['/', '/login', '/register'];
   const isPublicPage = publicPages.includes(location.pathname);
   
-  // Ne pas afficher la sidebar si l'utilisateur n'est pas connecté ou sur une page publique
+  // Hide sidebar if user is not authenticated or on a public page
   const shouldShowSidebar = isAuthenticated && !isPublicPage;
 
-  // Fonction pour récupérer le profil utilisateur
+  // Fetch user profile
   useEffect(() => {
     if (!shouldShowSidebar) {
       setLoading(false);
@@ -58,13 +55,13 @@ const NavigationMenu = ({ currentPage, onLogout, children }) => {
           const result = await response.json();
           setUserProfile(result.data);
         } else {
-          console.error('Erreur lors de la récupération du profil');
+          console.error('Error fetching user profile');
           if (response.status === 401) {
             handleLogout();
           }
         }
       } catch (error) {
-        console.error('Erreur de connexion:', error);
+        console.error('Connection error:', error);
       } finally {
         setLoading(false);
       }
@@ -73,35 +70,35 @@ const NavigationMenu = ({ currentPage, onLogout, children }) => {
     fetchUserProfile();
   }, [shouldShowSidebar]);
 
-  // Configuration des pages de navigation
+  // Navigation items configuration
   const navigationItems = [
     {
       id: 'properties',
       name: 'Properties',
       icon: Building,
       path: '/property-catalog',
-      description: 'Catalogue immobilier'
+      description: 'Real estate catalog'
     },
     {
       id: 'prospects',
       name: 'Prospects',
       icon: Users,
       path: '/prospects',
-      description: 'Base de données prospects'
+      description: 'Prospects database'
     },
     {
       id: 'whatsapp',
       name: 'WhatsApp',
       icon: MessageCircle,
       path: '/whatsapp-campaigns',
-      description: 'Campagnes WhatsApp'
+      description: 'WhatsApp campaigns'
     },
-        {
+    {
       id: 'profile',
       name: 'Profile',
       icon: User,
       path: '/user-profile',
-      description: 'Mon profil'
+      description: 'My profile'
     }
   ];
 
@@ -120,7 +117,7 @@ const NavigationMenu = ({ currentPage, onLogout, children }) => {
     navigate(item.path);
   };
 
-  // Si la sidebar ne doit pas être affichée, retourner seulement le contenu
+  // If the sidebar should not be shown, return only children content
   if (!shouldShowSidebar) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -129,7 +126,7 @@ const NavigationMenu = ({ currentPage, onLogout, children }) => {
     );
   }
 
-  // Affichage normal avec sidebar
+  // Normal layout with sidebar
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
@@ -137,7 +134,7 @@ const NavigationMenu = ({ currentPage, onLogout, children }) => {
         isCollapsed ? 'w-16' : 'w-64'
       }`}>
         
-        {/* Header du Sidebar */}
+        {/* Sidebar Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           {!isCollapsed && (
             <div className="flex items-center space-x-3">
@@ -209,7 +206,7 @@ const NavigationMenu = ({ currentPage, onLogout, children }) => {
                 </div>
                 <div className="text-left min-w-0 flex-1">
                   <div className="font-medium text-gray-900 truncate">
-                    {loading ? 'Chargement...' : userProfile?.name || 'Utilisateur'}
+                    {loading ? 'Loading...' : userProfile?.name || 'User'}
                   </div>
                   <div className="text-xs text-green-500 truncate flex items-center">
                     <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1"></div>
@@ -221,7 +218,7 @@ const NavigationMenu = ({ currentPage, onLogout, children }) => {
               <button
                 onClick={handleLogout}
                 className="p-2 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
-                title="Se déconnecter"
+                title="Logout"
               >
                 <LogOut className="h-4 w-4" />
               </button>

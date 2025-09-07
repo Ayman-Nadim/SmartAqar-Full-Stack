@@ -1,5 +1,6 @@
-// components/PropertyViewModal.js
+// components/PropertyViewModal.jsx - Code complet
 import React, { useState } from 'react';
+import { propertyService } from '../services/propertyService';
 import { 
   X, 
   MapPin, 
@@ -84,6 +85,13 @@ const PropertyViewModal = ({
 
   const hasImages = property.images && property.images.length > 0;
 
+  // Debug: Log des informations d'image
+  if (hasImages) {
+    console.log('Modal - Property images:', property.images);
+    console.log('Modal - Current image path:', property.images[currentImageIndex]);
+    console.log('Modal - Generated URL:', propertyService.getImageUrl(property.images[currentImageIndex]));
+  }
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -94,9 +102,16 @@ const PropertyViewModal = ({
             {hasImages ? (
               <>
                 <img
-                  src={property.images[currentImageIndex]}
+                  src={propertyService.getImageUrl(property.images[currentImageIndex])}
                   alt={`${property.title} - Image ${currentImageIndex + 1}`}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.error('Modal - Image failed to load:', e.target.src);
+                    e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDUwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI1MDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMzUgMTIwSDI2NVYxNTBIMjM1VjEyMFpNMjA1IDE1MEgyMzVWMTgwSDIwNVYxNTBaTTI2NSAxNTBIMjk1VjE4MEgyNjVWMTUwWiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K';
+                  }}
+                  onLoad={() => {
+                    console.log('Modal - Image loaded successfully:', property.images[currentImageIndex]);
+                  }}
                 />
                 
                 {/* Navigation des images */}
@@ -234,6 +249,80 @@ const PropertyViewModal = ({
             </div>
           )}
 
+          {/* Image Gallery Thumbnails */}
+          {hasImages && property.images.length > 1 && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-3">Gallery ({property.images.length} images)</h3>
+              <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
+                {property.images.map((image, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentImageIndex(index)}
+                    className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                      index === currentImageIndex
+                        ? 'border-blue-500 ring-2 ring-blue-200'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <img
+                      src={propertyService.getImageUrl(image)}
+                      alt={`Thumbnail ${index + 1}`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik00MCA0MEg2MFY2MEg0MFY0MFpNMzAgNjBINDBWODBIMzBWNjBaTTYwIDYwSDcwVjgwSDYwVjYwWiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K';
+                      }}
+                    />
+                    {index === currentImageIndex && (
+                      <div className="absolute inset-0 bg-blue-500 bg-opacity-20 flex items-center justify-center">
+                        <div className="w-3 h-3 bg-white rounded-full"></div>
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Property Information Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            {/* Left Column */}
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-medium text-gray-700 mb-1">Property ID</h4>
+                <p className="text-gray-900">{property._id}</p>
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-700 mb-1">Status</h4>
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(property.status)}`}>
+                  {getStatusIcon(property.status)}
+                  <span className="ml-1 capitalize">{property.status}</span>
+                </span>
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-700 mb-1">Property Type</h4>
+                <p className="text-gray-900 capitalize">{property.type}</p>
+              </div>
+            </div>
+
+            {/* Right Column */}
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-medium text-gray-700 mb-1">Added Date</h4>
+                <p className="text-gray-900">{formatDate(property.addedDate)}</p>
+              </div>
+              {property.updatedDate && property.updatedDate !== property.addedDate && (
+                <div>
+                  <h4 className="font-medium text-gray-700 mb-1">Last Updated</h4>
+                  <p className="text-gray-900">{formatDate(property.updatedDate)}</p>
+                </div>
+              )}
+              <div>
+                <h4 className="font-medium text-gray-700 mb-1">Price per m²</h4>
+                <p className="text-gray-900">{formatPrice(Math.round(property.price / property.area))} / m²</p>
+              </div>
+            </div>
+          </div>
+
           {/* Action Buttons */}
           <div className="flex space-x-3 pt-4 border-t border-gray-200">
             <button
@@ -257,8 +346,10 @@ const PropertyViewModal = ({
             {onDelete && (
               <button
                 onClick={() => {
-                  onDelete(property);
-                  onClose();
+                  if (window.confirm(`Are you sure you want to delete "${property.title}"?`)) {
+                    onDelete(property);
+                    onClose();
+                  }
                 }}
                 className="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center space-x-2"
               >

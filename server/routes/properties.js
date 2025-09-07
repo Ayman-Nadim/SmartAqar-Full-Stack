@@ -1,6 +1,10 @@
+// routes/properties.js - Version mise à jour avec upload d'images
 const express = require('express');
 const Property = require('../models/Property');
 const auth = require('../middleware/auth');
+const { handleUpload } = require('../middleware/upload');
+const fs = require('fs');
+const path = require('path');
 const router = express.Router();
 
 // GET /api/v1/properties - Get all properties for authenticated user
@@ -144,8 +148,8 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
-// POST /api/v1/properties - Create new property
-router.post('/', auth, async (req, res) => {
+// POST /api/v1/properties - Create new property with image upload
+router.post('/', auth, handleUpload, async (req, res) => {
   try {
     const {
       title,
@@ -153,16 +157,46 @@ router.post('/', auth, async (req, res) => {
       price,
       location,
       status = 'available',
-      images = [],
       bedrooms = 0,
       bathrooms,
       area,
       description = '',
-      features = []
+      features
     } = req.body;
+
+    // Parse features if it's a string (from FormData)
+    let parsedFeatures = [];
+    if (features) {
+      try {
+        parsedFeatures = typeof features === 'string' ? JSON.parse(features) : features;
+      } catch (e) {
+        parsedFeatures = [];
+      }
+    }
+
+    // Parse existing images if updating
+    let existingImages = [];
+    if (req.body.existingImages) {
+      try {
+        existingImages = typeof req.body.existingImages === 'string' 
+          ? JSON.parse(req.body.existingImages) 
+          : req.body.existingImages;
+      } catch (e) {
+        existingImages = [];
+      }
+    }
 
     // Validation
     if (!title || !type || !price || !location || !bathrooms || !area) {
+      // Supprimer les fichiers uploadés en cas d'erreur de validation
+      if (req.files && req.files.length > 0) {
+        req.files.forEach(file => {
+          fs.unlink(file.path, (err) => {
+            if (err) console.error('Error deleting file:', err);
+          });
+        });
+      }
+
       return res.status(400).json({
         success: false,
         message: 'Missing required fields: title, type, price, location, bathrooms, area'
@@ -172,6 +206,15 @@ router.post('/', auth, async (req, res) => {
     // Validate property type
     const validTypes = ['villa', 'apartment', 'house', 'commercial'];
     if (!validTypes.includes(type.toLowerCase())) {
+      // Supprimer les fichiers uploadés
+      if (req.files && req.files.length > 0) {
+        req.files.forEach(file => {
+          fs.unlink(file.path, (err) => {
+            if (err) console.error('Error deleting file:', err);
+          });
+        });
+      }
+
       return res.status(400).json({
         success: false,
         message: 'Invalid property type. Must be: villa, apartment, house, or commercial'
@@ -181,18 +224,35 @@ router.post('/', auth, async (req, res) => {
     // Validate status
     const validStatuses = ['available', 'sold', 'pending'];
     if (!validStatuses.includes(status)) {
+      // Supprimer les fichiers uploadés
+      if (req.files && req.files.length > 0) {
+        req.files.forEach(file => {
+          fs.unlink(file.path, (err) => {
+            if (err) console.error('Error deleting file:', err);
+          });
+        });
+      }
+
       return res.status(400).json({
         success: false,
         message: 'Invalid status. Must be: available, sold, or pending'
       });
     }
 
-    // Validate images array (max 3 images)
-    if (images.length > 3) {
-      return res.status(400).json({
-        success: false,
-        message: 'Maximum 3 images allowed'
+    // Traiter les images uploadées
+    let imageUrls = [...existingImages]; // Commencer avec les images existantes
+
+    if (req.files && req.files.length > 0) {
+      const newImageUrls = req.files.map(file => {
+        // Créer l'URL complète pour accéder à l'image
+        return `/uploads/properties/${file.filename}`;
       });
+      imageUrls = [...imageUrls, ...newImageUrls];
+    }
+
+    // Limiter à 3 images maximum
+    if (imageUrls.length > 3) {
+      imageUrls = imageUrls.slice(0, 3);
     }
 
     const property = new Property({
@@ -201,12 +261,12 @@ router.post('/', auth, async (req, res) => {
       price: Number(price),
       location,
       status,
-      images,
+      images: imageUrls,
       bedrooms: Number(bedrooms),
       bathrooms: Number(bathrooms),
       area: Number(area),
       description,
-      features,
+      features: parsedFeatures,
       owner: req.user._id
     });
 
@@ -222,6 +282,15 @@ router.post('/', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Create property error:', error);
+
+    // Supprimer les fichiers uploadés en cas d'erreur
+    if (req.files && req.files.length > 0) {
+      req.files.forEach(file => {
+        fs.unlink(file.path, (err) => {
+          if (err) console.error('Error deleting file:', err);
+        });
+      });
+    }
 
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map(err => err.message);
@@ -239,8 +308,8 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-// PUT /api/v1/properties/:id - Update property
-router.put('/:id', auth, async (req, res) => {
+// PUT /api/v1/properties/:id - Update property with image upload
+router.put('/:id', auth, handleUpload, async (req, res) => {
   try {
     const {
       title,
@@ -248,13 +317,34 @@ router.put('/:id', auth, async (req, res) => {
       price,
       location,
       status,
-      images,
       bedrooms,
       bathrooms,
       area,
       description,
       features
     } = req.body;
+
+    // Parse features if it's a string (from FormData)
+    let parsedFeatures;
+    if (features !== undefined) {
+      try {
+        parsedFeatures = typeof features === 'string' ? JSON.parse(features) : features;
+      } catch (e) {
+        parsedFeatures = [];
+      }
+    }
+
+    // Parse existing images
+    let existingImages = [];
+    if (req.body.existingImages) {
+      try {
+        existingImages = typeof req.body.existingImages === 'string' 
+          ? JSON.parse(req.body.existingImages) 
+          : req.body.existingImages;
+      } catch (e) {
+        existingImages = [];
+      }
+    }
 
     // Find property and verify ownership
     const property = await Property.findOne({
@@ -263,6 +353,15 @@ router.put('/:id', auth, async (req, res) => {
     });
 
     if (!property) {
+      // Supprimer les fichiers uploadés si la propriété n'existe pas
+      if (req.files && req.files.length > 0) {
+        req.files.forEach(file => {
+          fs.unlink(file.path, (err) => {
+            if (err) console.error('Error deleting file:', err);
+          });
+        });
+      }
+
       return res.status(404).json({
         success: false,
         message: 'Property not found'
@@ -273,6 +372,15 @@ router.put('/:id', auth, async (req, res) => {
     if (type) {
       const validTypes = ['villa', 'apartment', 'house', 'commercial'];
       if (!validTypes.includes(type.toLowerCase())) {
+        // Supprimer les fichiers uploadés
+        if (req.files && req.files.length > 0) {
+          req.files.forEach(file => {
+            fs.unlink(file.path, (err) => {
+              if (err) console.error('Error deleting file:', err);
+            });
+          });
+        }
+
         return res.status(400).json({
           success: false,
           message: 'Invalid property type'
@@ -284,6 +392,15 @@ router.put('/:id', auth, async (req, res) => {
     if (status) {
       const validStatuses = ['available', 'sold', 'pending'];
       if (!validStatuses.includes(status)) {
+        // Supprimer les fichiers uploadés
+        if (req.files && req.files.length > 0) {
+          req.files.forEach(file => {
+            fs.unlink(file.path, (err) => {
+              if (err) console.error('Error deleting file:', err);
+            });
+          });
+        }
+
         return res.status(400).json({
           success: false,
           message: 'Invalid status'
@@ -291,13 +408,34 @@ router.put('/:id', auth, async (req, res) => {
       }
     }
 
-    // Validate images if provided
-    if (images && images.length > 3) {
-      return res.status(400).json({
-        success: false,
-        message: 'Maximum 3 images allowed'
+    // Gérer les images
+    let imageUrls = existingImages; // Commencer avec les images existantes
+
+    if (req.files && req.files.length > 0) {
+      // Ajouter les nouvelles images
+      const newImageUrls = req.files.map(file => {
+        return `/uploads/properties/${file.filename}`;
       });
+      imageUrls = [...imageUrls, ...newImageUrls];
     }
+
+    // Limiter à 3 images maximum
+    if (imageUrls.length > 3) {
+      imageUrls = imageUrls.slice(0, 3);
+    }
+
+    // Supprimer les anciennes images qui ne sont plus utilisées
+    const oldImages = property.images || [];
+    const imagesToDelete = oldImages.filter(img => !imageUrls.includes(img));
+    
+    imagesToDelete.forEach(imageUrl => {
+      if (imageUrl.startsWith('/uploads/')) {
+        const imagePath = path.join(__dirname, '..', imageUrl);
+        fs.unlink(imagePath, (err) => {
+          if (err) console.error('Error deleting old image:', err);
+        });
+      }
+    });
 
     // Update fields
     const updateData = {};
@@ -306,12 +444,14 @@ router.put('/:id', auth, async (req, res) => {
     if (price !== undefined) updateData.price = Number(price);
     if (location !== undefined) updateData.location = location;
     if (status !== undefined) updateData.status = status;
-    if (images !== undefined) updateData.images = images;
     if (bedrooms !== undefined) updateData.bedrooms = Number(bedrooms);
     if (bathrooms !== undefined) updateData.bathrooms = Number(bathrooms);
     if (area !== undefined) updateData.area = Number(area);
     if (description !== undefined) updateData.description = description;
-    if (features !== undefined) updateData.features = features;
+    if (parsedFeatures !== undefined) updateData.features = parsedFeatures;
+    
+    // Toujours mettre à jour les images (même si aucune nouvelle image)
+    updateData.images = imageUrls;
 
     const updatedProperty = await Property.findByIdAndUpdate(
       req.params.id,
@@ -326,6 +466,15 @@ router.put('/:id', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Update property error:', error);
+
+    // Supprimer les fichiers uploadés en cas d'erreur
+    if (req.files && req.files.length > 0) {
+      req.files.forEach(file => {
+        fs.unlink(file.path, (err) => {
+          if (err) console.error('Error deleting file:', err);
+        });
+      });
+    }
 
     if (error.name === 'CastError') {
       return res.status(400).json({
@@ -362,6 +511,18 @@ router.delete('/:id', auth, async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Property not found'
+      });
+    }
+
+    // Supprimer les images associées
+    if (property.images && property.images.length > 0) {
+      property.images.forEach(imageUrl => {
+        if (imageUrl.startsWith('/uploads/')) {
+          const imagePath = path.join(__dirname, '..', imageUrl);
+          fs.unlink(imagePath, (err) => {
+            if (err) console.error('Error deleting image:', err);
+          });
+        }
       });
     }
 

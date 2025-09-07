@@ -163,10 +163,10 @@ export default function LandingPage() {
   <div className="container mx-auto flex flex-col lg:flex-row items-center gap-12 px-6 relative">
     <div className="flex-1 space-y-6">
       <h1 className="text-5xl lg:text-5xl font-bold leading-tight bg-gradient-to-r from-[#007bff] via-[#00c2ff] to-[#28a745] bg-clip-text text-transparent">
-        Automatically Prospect Your Clients via WhatsApp and Keep Them Updated on New Properties
+        Upload your data and let our platform connect the right properties to the right prospects automatically.
       </h1>
       <p className="text-xl text-gray-700">
-        SMARTAQAR automates your WhatsApp campaigns, informing your prospects about new properties and maximizing your conversions.
+        Save time and boost conversions: SMARTAQAR automatically shares the perfect property with each prospect via WhatsApp.
       </p>
       <div className="flex flex-col sm:flex-row gap-4">
         <Link to="/register">
@@ -199,8 +199,8 @@ export default function LandingPage() {
       {/* Trusted by Real Estate Professionals */}
       <section id="trusted" className={`py-20 bg-gray-100 transition-all duration-1000 ${visibleSections.trusted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
         <div className="container mx-auto px-6">
-          <h2 className="text-3xl font-bold text-center mb-4">Trusted by Real Estate Professionals</h2>
-          <p className="text-center text-gray-700 mb-12">See our platform in action across different property types</p>
+          <h2 className="text-3xl font-bold text-center mb-4">Built for Real Estate Success</h2>
+          <p className="text-center text-gray-700 mb-12">Explore our platform across all property categories</p>
           
           <div className="grid sm:grid-cols-1 md:grid-cols-3 gap-8">
             {/* Luxury Villa Properties */}

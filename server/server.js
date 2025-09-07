@@ -1,6 +1,8 @@
+// server.js - Modifications nécessaires
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -9,6 +11,9 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Servir les fichiers statiques (images uploadées)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/smartaquarv2');
@@ -60,6 +65,29 @@ app.get('/api/v1/profile', auth, async (req, res) => {
 // Global error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
+  
+  // Gérer les erreurs multer
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({
+      success: false,
+      message: 'File too large. Maximum size is 10MB per image.'
+    });
+  }
+  
+  if (err.code === 'LIMIT_FILE_COUNT') {
+    return res.status(400).json({
+      success: false,
+      message: 'Too many files. Maximum 3 images allowed.'
+    });
+  }
+  
+  if (err.message === 'Only image files are allowed') {
+    return res.status(400).json({
+      success: false,
+      message: 'Only image files are allowed.'
+    });
+  }
+
   res.status(500).json({
     success: false,
     message: 'Something went wrong!',

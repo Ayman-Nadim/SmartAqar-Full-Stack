@@ -1,5 +1,6 @@
-// components/PropertyCard.js
+// components/PropertyCard.jsx - Code complet
 import React, { useState } from 'react';
+import { propertyService } from '../services/propertyService';
 import { 
   Home, 
   Building2, 
@@ -80,7 +81,7 @@ const PropertyCard = ({ property, onView, onEdit, onDelete }) => {
   const hasImages = property.images && property.images.length > 0;
 
   const handleView = (e) => {
-    e.stopPropagation(); // Empêche le clic sur la carte parent
+    e.stopPropagation();
     if (onView) onView(property);
   };
 
@@ -94,6 +95,13 @@ const PropertyCard = ({ property, onView, onEdit, onDelete }) => {
     if (onDelete) onDelete(property);
   };
 
+  // Debug: Log des informations d'image
+  if (hasImages) {
+    console.log('Property images:', property.images);
+    console.log('Current image path:', property.images[currentImageIndex]);
+    console.log('Generated URL:', propertyService.getImageUrl(property.images[currentImageIndex]));
+  }
+
   return (
     <div 
       className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 group cursor-pointer"
@@ -104,11 +112,15 @@ const PropertyCard = ({ property, onView, onEdit, onDelete }) => {
         {hasImages ? (
           <>
             <img
-              src={property.images[currentImageIndex]}
+              src={propertyService.getImageUrl(property.images[currentImageIndex])}
               alt={`${property.title} - Image ${currentImageIndex + 1}`}
               className="w-full h-full object-cover"
               onError={(e) => {
+                console.error('Image failed to load:', e.target.src);
                 e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDUwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI1MDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMzUgMTIwSDI2NVYxNTBIMjM1VjEyMFpNMjA1IDE1MEgyMzVWMTgwSDIwNVYxNTBaTTI2NSAxNTBIMjk1VjE4MEgyNjVWMTUwWiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K';
+              }}
+              onLoad={() => {
+                console.log('Image loaded successfully:', property.images[currentImageIndex]);
               }}
             />
             

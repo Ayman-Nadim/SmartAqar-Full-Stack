@@ -1,3 +1,4 @@
+// models/Property.js - Version mise à jour
 const mongoose = require('mongoose');
 
 const propertySchema = new mongoose.Schema({
@@ -32,10 +33,10 @@ const propertySchema = new mongoose.Schema({
     type: String,
     validate: {
       validator: function(v) {
-        // More flexible URL validation that accepts query parameters
-        return /^https?:\/\/.+/i.test(v);
+        // Validation plus flexible pour URLs externes ET chemins locaux
+        return /^(https?:\/\/.+|\/uploads\/.+)/i.test(v);
       },
-      message: 'Please provide a valid image URL'
+      message: 'Please provide a valid image URL or file path'
     }
   }],
   bedrooms: {
@@ -89,6 +90,21 @@ propertySchema.index({ location: 'text', title: 'text', description: 'text' });
 propertySchema.pre('save', function(next) {
   this.updatedDate = new Date();
   next();
+});
+
+// Virtual pour les URLs complètes des images
+propertySchema.virtual('imageUrls').get(function() {
+  if (!this.images || this.images.length === 0) return [];
+  
+  return this.images.map(imagePath => {
+    // Si c'est déjà une URL complète, la retourner telle quelle
+    if (imagePath.startsWith('http')) {
+      return imagePath;
+    }
+    // Sinon, construire l'URL complète pour les fichiers locaux
+    const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+    return `${baseUrl}${imagePath}`;
+  });
 });
 
 // Virtual for formatted price

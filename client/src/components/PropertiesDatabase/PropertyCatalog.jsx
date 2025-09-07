@@ -1,8 +1,8 @@
-// components/PropertyCatalog.js
 import React, { useState, useEffect } from 'react';
 import { 
   Building2, 
   Plus, 
+  Upload,
   CheckCircle, 
   XCircle, 
   Clock, 
@@ -11,12 +11,13 @@ import {
   Loader
 } from 'lucide-react';
 
-// Import the service and components
-import { propertyService } from '../../services/propertyService';
+// Import your existing components and service
+import { propertyService } from '../services/propertyService'; // Your original service
 import PropertyCard from './PropertyCard';
 import PropertyForm from './PropertyForm';
 import PropertyFilters from './PropertyFilters';
 import PropertyViewModal from './PropertyViewModal';
+import PropertyImportModal from './PropertyImportModal'; // New import
 
 const PropertyCatalog = () => {
   const [properties, setProperties] = useState([]);
@@ -50,6 +51,7 @@ const PropertyCatalog = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false); // New state
   const [editingProperty, setEditingProperty] = useState(null);
   const [viewingProperty, setViewingProperty] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
@@ -123,14 +125,11 @@ const PropertyCatalog = () => {
   const handleFiltersChange = (newFilters) => {
     setFilters({
       ...newFilters,
-      page: 1 // Reset to first page when filters change
+      page: 1
     });
   };
 
   const handlePageChange = (newPage) => {
-    console.log('Changing to page:', newPage);
-    console.log('Current pagination:', pagination);
-    
     setFilters({
       ...filters,
       page: newPage
@@ -161,6 +160,52 @@ const PropertyCatalog = () => {
       console.error('Error creating property:', err);
       setError(err.message || 'Failed to create property');
       throw err; // Re-throw to be handled by the form
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  // NEW: Handle bulk import of properties
+  const handleImportProperties = async (propertiesData) => {
+    try {
+      setFormLoading(true);
+      let successCount = 0;
+      let errorCount = 0;
+      const errors = [];
+
+      // Process properties in batches
+      for (const property of propertiesData) {
+        try {
+          console.log('Importing property:', property.title);
+          const response = await propertyService.createProperty(property);
+          if (response.success) {
+            successCount++;
+          } else {
+            errorCount++;
+            errors.push(`${property.title}: ${response.message || 'Unknown error'}`);
+          }
+        } catch (error) {
+          errorCount++;
+          errors.push(`${property.title}: ${error.message}`);
+        }
+      }
+
+      // Refresh data
+      await loadProperties();
+      await loadStats();
+      
+      // Show appropriate notification
+      if (successCount > 0 && errorCount === 0) {
+        alert(`Successfully imported ${successCount} properties!`);
+      } else if (successCount > 0 && errorCount > 0) {
+        alert(`Imported ${successCount} properties. ${errorCount} failed.`);
+      } else {
+        alert('Failed to import properties. Please check your data and try again.');
+      }
+
+    } catch (error) {
+      console.error('Import properties error:', error);
+      alert('There was an error importing the properties. Please try again.');
     } finally {
       setFormLoading(false);
     }
@@ -224,7 +269,6 @@ const PropertyCatalog = () => {
   };
 
   const handleViewProperty = (property) => {
-    console.log('Viewing property:', property);
     setViewingProperty(property);
   };
 
@@ -255,7 +299,6 @@ const PropertyCatalog = () => {
     }
   ];
 
-  // Render pagination with smart page numbers
   const renderPagination = () => {
     if (pagination.pages <= 1) return null;
 
@@ -266,14 +309,12 @@ const PropertyCatalog = () => {
     let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
     let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
     
-    // Adjust start page if we're near the end
     if (endPage - startPage + 1 < maxVisiblePages) {
       startPage = Math.max(1, endPage - maxVisiblePages + 1);
     }
     
     const pages = [];
     
-    // Add first page and ellipsis if needed
     if (startPage > 1) {
       pages.push(
         <button
@@ -293,7 +334,6 @@ const PropertyCatalog = () => {
       }
     }
     
-    // Add visible page numbers
     for (let page = startPage; page <= endPage; page++) {
       pages.push(
         <button
@@ -310,7 +350,6 @@ const PropertyCatalog = () => {
       );
     }
     
-    // Add last page and ellipsis if needed
     if (endPage < totalPages) {
       if (endPage < totalPages - 1) {
         pages.push(
@@ -332,7 +371,6 @@ const PropertyCatalog = () => {
     
     return (
       <div className="space-y-4">
-        {/* Pagination Info */}
         <div className="text-center text-sm text-gray-500">
           Page {currentPage} of {totalPages} ({pagination.total} total properties)
         </div>
@@ -379,13 +417,26 @@ const PropertyCatalog = () => {
             </div>
           </div>
           
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-xl hover:from-green-600 hover:to-emerald-600 transition-all flex items-center space-x-2 shadow-lg hover:shadow-xl"
-          >
-            <Plus className="h-5 w-5" />
-            <span className="font-medium">Add Property</span>
-          </button>
+          {/* Action Buttons */}
+          <div className="flex items-center space-x-3">
+            {/* Import Button - NEW */}
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all flex items-center space-x-2 shadow-lg hover:shadow-xl"
+            >
+              <Upload className="h-5 w-5" />
+              <span className="font-medium">Import Properties</span>
+            </button>
+            
+            {/* Add Property Button */}
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-xl hover:from-green-600 hover:to-emerald-600 transition-all flex items-center space-x-2 shadow-lg hover:shadow-xl"
+            >
+              <Plus className="h-5 w-5" />
+              <span className="font-medium">Add Property</span>
+            </button>
+          </div>
         </div>
 
         {/* Error Message */}
@@ -460,10 +511,7 @@ const PropertyCatalog = () => {
               {properties.map((property) => (
                 <PropertyCard
                   key={property._id}
-                  property={{
-                    ...property,
-                    images: property.images?.map(img => propertyService.getImageUrl(img)) || []
-                  }}
+                  property={property}
                   onView={handleViewProperty}
                   onEdit={setEditingProperty}
                   onDelete={handleDeleteProperty}
@@ -487,12 +535,22 @@ const PropertyCatalog = () => {
                 : 'Get started by adding your first property'
               }
             </p>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-2 rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all"
-            >
-              Add Your First Property
-            </button>
+            <div className="flex items-center justify-center space-x-3">
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-2 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all flex items-center space-x-2"
+              >
+                <Upload className="h-4 w-4" />
+                <span>Import Properties</span>
+              </button>
+              <span className="text-gray-400">or</span>
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-2 rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all"
+              >
+                Add Your First Property
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -503,6 +561,13 @@ const PropertyCatalog = () => {
         onClose={() => setShowAddModal(false)}
         onSubmit={handleAddProperty}
         isLoading={formLoading}
+      />
+
+      {/* Import Properties Modal - NEW */}
+      <PropertyImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImportProperties={handleImportProperties}
       />
 
       {/* Edit Property Modal */}
@@ -516,10 +581,7 @@ const PropertyCatalog = () => {
 
       {/* View Property Modal */}
       <PropertyViewModal
-        property={viewingProperty ? {
-          ...viewingProperty,
-          images: viewingProperty.images?.map(img => propertyService.getImageUrl(img)) || []
-        } : null}
+        property={viewingProperty}
         isOpen={!!viewingProperty}
         onClose={() => setViewingProperty(null)}
         onEdit={setEditingProperty}
